@@ -1,47 +1,53 @@
 package storage
 
 import (
-	"moviesapi/entities"
+	"moviesapi/entity"
+	"moviesapi/external"
 	"sync"
 )
 
 var once sync.Once
 
-type Storage struct {
-	Movies []entities.Movie
+type IStorage interface {
+	List() []entity.Movie
+	GetByID(ID int) *entity.Movie
+	UpdateByID(ID int, data *external.MovieRequest) bool
+	DeleteByID(ID int) bool
+	Create(data *external.MovieRequest) *entity.Movie
 }
 
-var storageInstance *Storage
+type LocalStorage struct {
+	Movies []entity.Movie
+}
 
-func getInstance() *Storage {
+var storageInstance *LocalStorage
+
+func GetInstance(instance *LocalStorage) *LocalStorage {
 	once.Do(func() {
-		storageInstance = &Storage{}
+		storageInstance = instance
 	})
 
 	return storageInstance
 }
 
-func List() []entities.Movie {
-	storage := getInstance()
+func (storage *LocalStorage) List() []entity.Movie {
 	return storage.Movies
 }
 
-func GetByID(ID int) *entities.Movie {
-	storage := getInstance()
+func (storage *LocalStorage) GetByID(ID int) *entity.Movie {
 	for _, movie := range storage.Movies {
 		if movie.ID == ID {
 			return &movie
 		}
 	}
-	return &entities.Movie{}
+	return &entity.Movie{}
 }
 
-func UpdateByID(ID int, data *entities.Movie) bool {
-	storage := getInstance()
+func (storage *LocalStorage) UpdateByID(ID int, data *external.MovieRequest) bool {
 	for index, movie := range storage.Movies {
 		if movie.ID == ID {
 			data.ID = ID
-			storage.Movies[index] = *data
+			storage.Movies[index] = *external.NewMovie(data)
 			return true
 		}
 	}
@@ -49,9 +55,8 @@ func UpdateByID(ID int, data *entities.Movie) bool {
 	return false
 }
 
-func DeleteByID(ID int) bool {
-	storage := getInstance()
-	var newSlice []entities.Movie
+func (storage *LocalStorage) DeleteByID(ID int) bool {
+	var newSlice []entity.Movie
 	for _, movie := range storage.Movies {
 		if movie.ID != ID {
 			newSlice = append(newSlice, movie)
@@ -62,10 +67,9 @@ func DeleteByID(ID int) bool {
 	return true
 }
 
-func Create(movie *entities.Movie) *entities.Movie {
-	storage := getInstance()
-	ID := len(storage.Movies) + 1
-	movie.ID = ID
+func (storage *LocalStorage) Create(data *external.MovieRequest) *entity.Movie {
+	data.ID = len(storage.Movies) + 1
+	movie := external.NewMovie(data)
 	storage.Movies = append(storage.Movies, *movie)
 	return movie
 }

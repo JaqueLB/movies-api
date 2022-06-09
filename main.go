@@ -1,11 +1,18 @@
 package main
 
 import (
+	"moviesapi/controller"
+	"moviesapi/router"
+	"moviesapi/storage"
+
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	router := gin.Default()
-	router = CreateRoutes(router)
-	router.Run(":8080")
+	controller := &controller.MovieController{
+		Storage: &storage.LocalStorage{},
+	}
+	engine := gin.Default()
+	engine = router.CreateRoutes(engine, controller)
+	engine.Run(":8080")
 }

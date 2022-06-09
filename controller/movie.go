@@ -1,7 +1,7 @@
-package controllers
+package controller
 
 import (
-	"moviesapi/entities"
+	"moviesapi/external"
 	"moviesapi/storage"
 	"net/http"
 	"strconv"
@@ -9,13 +9,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetMovies(ctx *gin.Context) {
+type MovieController struct {
+	Storage storage.IStorage
+}
+
+func (c *MovieController) GetMovies(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
-		"data": storage.List(),
+		"data": c.Storage.List(),
 	})
 }
 
-func GetMovieByID(ctx *gin.Context) {
+func (c *MovieController) GetMovieByID(ctx *gin.Context) {
 	ID, err := strconv.Atoi(ctx.Param("ID"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -24,16 +28,15 @@ func GetMovieByID(ctx *gin.Context) {
 		return
 	}
 
-	movie := storage.GetByID(ID)
+	movie := c.Storage.GetByID(ID)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"data": movie,
 	})
 }
 
-func UpdateMovieByID(ctx *gin.Context) {
+func (c *MovieController) UpdateMovieByID(ctx *gin.Context) {
 	ID, err := strconv.Atoi(ctx.Param("ID"))
-	var movie *entities.Movie
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -42,18 +45,19 @@ func UpdateMovieByID(ctx *gin.Context) {
 		return
 	}
 
-	if err := ctx.ShouldBindJSON(&movie); err != nil {
+	var data *external.MovieRequest
+
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"err": err.Error()})
 		return
 	}
-
-	storage.UpdateByID(ID, movie)
+	c.Storage.UpdateByID(ID, data)
 	ctx.JSON(http.StatusOK, gin.H{
 		"data": "OK",
 	})
 }
 
-func DeleteMovieByID(ctx *gin.Context) {
+func (c *MovieController) DeleteMovieByID(ctx *gin.Context) {
 	ID, err := strconv.Atoi(ctx.Param("ID"))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -62,22 +66,22 @@ func DeleteMovieByID(ctx *gin.Context) {
 		return
 	}
 
-	storage.DeleteByID(ID)
+	c.Storage.DeleteByID(ID)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"data": "OK",
 	})
 }
 
-func CreateMovie(ctx *gin.Context) {
-	var movie *entities.Movie
+func (c *MovieController) CreateMovie(ctx *gin.Context) {
+	var data *external.MovieRequest
 
-	if err := ctx.ShouldBindJSON(&movie); err != nil {
+	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"err": err.Error()})
 		return
 	}
 
-	movie = storage.Create(movie)
+	movie := c.Storage.Create(data)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"data": movie,
